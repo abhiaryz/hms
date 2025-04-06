@@ -293,6 +293,37 @@ export default function RoomDetailPage({ params }: { params: Promise<{ id: strin
               {room.lastCleaned ? new Date(room.lastCleaned).toLocaleDateString() : 'Not available'}
             </p>
           </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Room Service</h2>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => router.push(`/dashboard/services/room-service?room=${room.roomNumber}&type=food`)}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <Utensils size={18} />
+                  <span>Order Food & Beverages</span>
+                </button>
+                <button
+                  onClick={() => router.push(`/dashboard/services/room-service?room=${room.roomNumber}&type=amenity`)}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  <Receipt size={18} />
+                  <span>Request Amenities</span>
+                </button>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={() => router.push(`/dashboard/services/room-service?room=${room.roomNumber}`)}
+                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                >
+                  <Plus size={16} />
+                  <span>View All Orders</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

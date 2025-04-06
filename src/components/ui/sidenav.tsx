@@ -21,14 +21,19 @@ import {
   Utensils,
   Receipt,
   Users,
-  BarChart
+  BarChart,
+  LogOut,
+  Link as LinkIcon
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from '@/hooks/useSidebar';
+import { useRouter, usePathname } from 'next/navigation';
 
 export function Sidenav() {
   const { data: session, status } = useSession();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const navItems = [
     { icon: Home, label: 'Dashboard', href: '/dashboard' },
@@ -54,12 +59,13 @@ export function Sidenav() {
     },
     {
       icon: Utensils,
-      label: 'Orders',
-      href: '/dashboard/orders',
+      label: 'Services',
+      href: '/dashboard/services',
       subItems: [
-        { icon: Coffee, label: 'Room Service', href: '/dashboard/orders/room-service' },
-        { icon: Bell, label: 'Amenities', href: '/dashboard/orders/amenities' },
-        { icon: Wrench, label: 'Housekeeping', href: '/dashboard/orders/housekeeping' },
+        { icon: Coffee, label: 'Room Service', href: '/dashboard/services/room-service' },
+        { icon: Bell, label: 'Amenities', href: '/dashboard/services/amenities' },
+        { icon: Wrench, label: 'Housekeeping', href: '/dashboard/services/housekeeping' },
+        { icon: Receipt, label: 'Orders', href: '/dashboard/services/orders' },
       ]
     },
     {
@@ -72,9 +78,24 @@ export function Sidenav() {
         { icon: BarChart, label: 'Revenue', href: '/dashboard/payments/revenue' },
       ]
     },
+    {
+      icon: LinkIcon,
+      label: 'Integrations',
+      href: '/dashboard/integrations',
+      subItems: [
+        { icon: LinkIcon, label: 'Airbnb', href: '/dashboard/integrations/airbnb' },
+        { icon: LinkIcon, label: 'MakeMyTrip', href: '/dashboard/integrations/makemytrip' },
+        { icon: LinkIcon, label: 'Booking.com', href: '/dashboard/integrations/booking' },
+      ]
+    },
     { icon: User, label: 'Staff', href: '/dashboard/staff' },
     { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
   ];
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push('/login');
+  };
 
   return (
     <nav className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 text-gray-900 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
@@ -91,76 +112,64 @@ export function Sidenav() {
         <ul className="space-y-1 px-2">
           {navItems.map((item) => (
             <li key={item.label}>
-              <Link
-                href={item.href}
-                className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200"
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
-              </Link>
-              {!isCollapsed && item.subItems && (
-                <ul className="ml-8 mt-1 space-y-1">
-                  {item.subItems.map((subItem) => (
-                    <li key={subItem.label}>
-                      <Link
-                        href={subItem.href}
-                        className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <subItem.icon className="w-4 h-4 flex-shrink-0" />
-                        <span className="font-medium text-sm">{subItem.label}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+              {item.subItems ? (
+                <div>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                      pathname === item.href
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5 mr-3" />
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </Link>
+                  {!isCollapsed && (
+                    <ul className="mt-1 ml-4 space-y-1">
+                      {item.subItems.map((subItem) => (
+                        <li key={subItem.label}>
+                          <Link
+                            href={subItem.href}
+                            className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                              pathname === subItem.href
+                                ? 'bg-gray-100 text-gray-900'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }`}
+                          >
+                            <subItem.icon className="h-4 w-4 mr-3" />
+                            <span>{subItem.label}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                    pathname === item.href
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Link>
               )}
             </li>
           ))}
         </ul>
       </div>
-      <div className="p-4 border-t border-gray-100 bg-gray-50">
-        {status === 'loading' ? (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-            {!isCollapsed && (
-              <div className="space-y-1">
-                <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-2 w-24 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-            )}
-          </div>
-        ) : session?.user ? (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-              {session.user.image ? (
-                <img
-                  src={session.user.image}
-                  alt={session.user.name || ''}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <User className="w-5 h-5 text-gray-600" />
-              )}
-            </div>
-            {!isCollapsed && (
-              <div>
-                <p className="font-medium text-gray-900 text-sm">{session.user.name}</p>
-                <p className="text-xs text-gray-500 truncate max-w-[120px]">{session.user.email}</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-gray-600" />
-            </div>
-            {!isCollapsed && (
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Staff User</p>
-                <p className="text-xs text-gray-500">Not logged in</p>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="border-t border-gray-100 p-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md"
+        >
+          <LogOut className="h-5 w-5 mr-3" />
+          {!isCollapsed && <span>Logout</span>}
+        </button>
       </div>
     </nav>
   );
