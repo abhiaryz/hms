@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import connectToDatabase from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 // GET /api/bookings - Get all bookings
 export async function GET() {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const bookings = await db.collection("bookings")
       .find({})
@@ -14,6 +14,7 @@ export async function GET() {
     
     return NextResponse.json(bookings);
   } catch (error) {
+    console.error('Error fetching bookings:', error);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
   }
 }
@@ -21,7 +22,7 @@ export async function GET() {
 // POST /api/bookings - Create a new booking
 export async function POST(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
 // PUT /api/bookings/:id - Update a booking
 export async function PUT(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     const { id, ...updateData } = data;
@@ -84,7 +85,7 @@ export async function PUT(request: Request) {
 // DELETE /api/bookings/:id - Delete a booking
 export async function DELETE(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

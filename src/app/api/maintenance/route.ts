@@ -1,55 +1,77 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import connectToDatabase from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
-// GET /api/maintenance - Get all maintenance tasks
+interface MaintenanceTask {
+  _id?: ObjectId;
+  roomId: string;
+  issue: string;
+  priority: string;
+  scheduledDate: Date;
+  assignedTo?: string;
+  status: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface MaintenanceHistory {
+  taskId: ObjectId;
+  date: Date;
+  issue: string;
+  resolved: boolean;
+}
+
+// GET /api/maintenance - Get all maintenance requests
 export async function GET() {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
-    const tasks = await db.collection("maintenance")
+    const maintenance = await db.collection("maintenance")
       .find({})
-      .sort({ scheduledDate: 1 })
+      .sort({ createdAt: -1 })
       .toArray();
     
-    return NextResponse.json(tasks);
+    return NextResponse.json(maintenance);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch maintenance tasks' }, { status: 500 });
+    console.error('Error fetching maintenance requests:', error);
+    return NextResponse.json({ error: 'Failed to fetch maintenance requests' }, { status: 500 });
   }
 }
 
 // POST /api/maintenance - Create a new maintenance task
 export async function POST(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     
-    const task = {
-      ...data,
-      status: 'scheduled',
+    const task: MaintenanceTask = {
+      roomId: data.roomId,
+      issue: data.issue,
+      priority: data.priority,
+      scheduledDate: new Date(data.scheduledDate),
+      assignedTo: data.assignedTo,
+      status: 'pending',
+      notes: data.notes,
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
     const result = await db.collection("maintenance").insertOne(task);
     
-    // If room-specific task, update room's maintenance history
-    if (data.roomId) {
-      await db.collection("rooms").updateOne(
-        { _id: new ObjectId(data.roomId) },
-        { 
-          $push: { 
-            maintenanceHistory: {
-              taskId: result.insertedId,
-              date: data.scheduledDate,
-              issue: data.description,
-              resolved: false
-            }
-          }
-        }
-      );
-    }
+    // Update room maintenance history
+    const historyEntry: MaintenanceHistory = {
+      taskId: result.insertedId,
+      date: task.scheduledDate,
+      issue: task.issue,
+      resolved: false
+    };
+    
+    await db.collection("rooms").updateOne(
+      { _id: new ObjectId(data.roomId) },
+      { $push: { "maintenanceHistory": historyEntry } as any }
+    );
     
     return NextResponse.json({ 
       message: 'Maintenance task created successfully',
@@ -63,7 +85,7 @@ export async function POST(request: Request) {
 // PUT /api/maintenance/:id - Update a maintenance task
 export async function PUT(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     const { id, ...updateData } = data;
@@ -78,8 +100,8 @@ export async function PUT(request: Request) {
       }
     );
     
-    // If task is completed, update room's maintenance history
-    if (updateData.status === 'completed' && updateData.roomId) {
+    // If task is marked as resolved, update room maintenance history
+    if (updateData.status === 'resolved') {
       await db.collection("rooms").updateOne(
         { 
           _id: new ObjectId(updateData.roomId),
@@ -87,8 +109,7 @@ export async function PUT(request: Request) {
         },
         { 
           $set: { 
-            'maintenanceHistory.$.resolved': true,
-            'maintenanceHistory.$.notes': updateData.notes
+            'maintenanceHistory.$.resolved': true
           }
         }
       );
@@ -106,7 +127,7 @@ export async function PUT(request: Request) {
 // DELETE /api/maintenance/:id - Delete a maintenance task
 export async function DELETE(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -115,26 +136,22 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
     
-    // Get task before deleting to check if it's room-specific
-    const task = await db.collection("maintenance").findOne({ 
-      _id: new ObjectId(id) 
-    });
+    // Get the task details before deletion
+    const task = await db.collection("maintenance").findOne({ _id: new ObjectId(id) });
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
     
+    // Remove task from maintenance collection
     const result = await db.collection("maintenance").deleteOne({
       _id: new ObjectId(id)
     });
     
-    // If room-specific task, remove from room's maintenance history
-    if (task?.roomId) {
-      await db.collection("rooms").updateOne(
-        { _id: new ObjectId(task.roomId) },
-        { 
-          $pull: { 
-            maintenanceHistory: { taskId: new ObjectId(id) }
-          }
-        }
-      );
-    }
+    // Remove task from room's maintenance history
+    await db.collection("rooms").updateOne(
+      { _id: new ObjectId(task.roomId) },
+      { $pull: { "maintenanceHistory": { taskId: new ObjectId(id) } } as any }
+    );
     
     return NextResponse.json({ 
       message: 'Maintenance task deleted successfully',

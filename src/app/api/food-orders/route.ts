@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import connectToDatabase from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 // GET /api/food-orders - Get all food orders
 export async function GET() {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const foodOrders = await db.collection("foodOrders")
       .find({})
@@ -14,6 +14,7 @@ export async function GET() {
     
     return NextResponse.json(foodOrders);
   } catch (error) {
+    console.error('Error fetching food orders:', error);
     return NextResponse.json({ error: 'Failed to fetch food orders' }, { status: 500 });
   }
 }
@@ -21,7 +22,7 @@ export async function GET() {
 // POST /api/food-orders - Create a new food order
 export async function POST(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 // PUT /api/food-orders/:id - Update a food order
 export async function PUT(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     const { id, ...updateData } = data;
@@ -90,7 +91,7 @@ export async function PUT(request: Request) {
 // DELETE /api/food-orders/:id - Delete a food order
 export async function DELETE(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

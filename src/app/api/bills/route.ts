@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import connectToDatabase from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 // GET /api/bills - Get all bills
 export async function GET() {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const bills = await db.collection("bills")
       .find({})
@@ -14,6 +14,7 @@ export async function GET() {
     
     return NextResponse.json(bills);
   } catch (error) {
+    console.error('Error fetching bills:', error);
     return NextResponse.json({ error: 'Failed to fetch bills' }, { status: 500 });
   }
 }
@@ -21,7 +22,7 @@ export async function GET() {
 // POST /api/bills - Create a new bill
 export async function POST(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 // PUT /api/bills/:id - Update a bill
 export async function PUT(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const data = await request.json();
     const { id, ...updateData } = data;
@@ -78,56 +79,10 @@ export async function PUT(request: Request) {
   }
 }
 
-// POST /api/bills/:id/payments - Add a payment to a bill
-export async function POST(request: Request) {
-  try {
-    const client = await clientPromise;
-    const db = client.db("hotel_management");
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const data = await request.json();
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Bill ID is required' }, { status: 400 });
-    }
-    
-    const payment = {
-      ...data,
-      date: new Date()
-    };
-    
-    const bill = await db.collection("bills").findOne({ _id: new ObjectId(id) });
-    if (!bill) {
-      return NextResponse.json({ error: 'Bill not found' }, { status: 404 });
-    }
-    
-    const totalPaid = bill.payments.reduce((sum: number, p: any) => sum + p.amount, 0) + payment.amount;
-    const status = totalPaid >= bill.charges.total ? 'paid' : 'partial';
-    
-    const result = await db.collection("bills").updateOne(
-      { _id: new ObjectId(id) },
-      { 
-        $push: { payments: payment },
-        $set: { 
-          status,
-          updatedAt: new Date()
-        }
-      }
-    );
-    
-    return NextResponse.json({ 
-      message: 'Payment added successfully',
-      modifiedCount: result.modifiedCount 
-    });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to add payment' }, { status: 500 });
-  }
-}
-
 // DELETE /api/bills/:id - Delete a bill
 export async function DELETE(request: Request) {
   try {
-    const client = await clientPromise;
+    const client = await connectToDatabase();
     const db = client.db("hotel_management");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

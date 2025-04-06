@@ -5,8 +5,8 @@ import { ObjectId } from 'mongodb';
 // GET /api/rooms - Get all rooms
 export async function GET() {
   try {
-    const mongoose = await connectToDatabase();
-    const db = mongoose.connection.db as any;
+    const client = await connectToDatabase();
+    const db = client.db();
     const rooms = await db.collection("rooms")
       .find({})
       .sort({ roomNumber: 1 })
@@ -22,8 +22,8 @@ export async function GET() {
 // POST /api/rooms - Create a new room
 export async function POST(request: Request) {
   try {
-    const mongoose = await connectToDatabase();
-    const db = mongoose.connection.db as any;
+    const client = await connectToDatabase();
+    const db = client.db("hotel_management");
     const data = await request.json();
     
     // Check if room number already exists
@@ -63,8 +63,8 @@ export async function POST(request: Request) {
 // PUT /api/rooms/:id - Update a room
 export async function PUT(request: Request) {
   try {
-    const mongoose = await connectToDatabase();
-    const db = mongoose.connection.db as any;
+    const client = await connectToDatabase();
+    const db = client.db("hotel_management");
     const data = await request.json();
     const { id, ...updateData } = data;
     
@@ -86,8 +86,8 @@ export async function PUT(request: Request) {
 // DELETE /api/rooms/:id - Delete a room
 export async function DELETE(request: Request) {
   try {
-    const mongoose = await connectToDatabase();
-    const db = mongoose.connection.db as any;
+    const client = await connectToDatabase();
+    const db = client.db("hotel_management");
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     

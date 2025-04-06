@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function RoomServicePage() {
+// Create a client component that uses useSearchParams
+function RoomServiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomNumber = searchParams.get('room');
@@ -287,5 +288,14 @@ export default function RoomServicePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function RoomServicePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RoomServiceContent />
+    </Suspense>
   );
 } 
